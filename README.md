@@ -548,22 +548,8 @@ This eliminates credential repetition across tasks.
 - **Docker** (for Kestra)
 - **AWS Account** with admin access
 - **GCP Project** with BigQuery and GCS enabled (for GCP flow)
-- **Kestra** instance (local or cloud)
+- **Kestra** instance 
 
-.dataset.green_tripdata`;
-SELECT * FROM `project.dataset.green_tripdata` LIMIT 10;
-```
-
-### 8. Cleanup
-
-```bash
-# Destroy AWS infrastructure
-cd terraform
-terraform destroy
-
-# Stop Kestra
-docker-compose down
-```
 
 ---
 
@@ -585,64 +571,9 @@ docker-compose down
    - Run Kestra in a private subnet if possible
    - Use VPC endpoints for S3 and Athena
 
-### Cost Considerations
 
-| Service | Cost Driver | Optimization |
-|---------|-------------|--------------|
-| **S3** | Storage volume | Use lifecycle policies to archive old data |
-| **Athena** | Data scanned | Use partitioning and Parquet format |
-| **BigQuery** | Data scanned | Use partitioning and clustering |
-| **Kestra** | Compute time | Use appropriate container sizes |
 
-**Estimated Monthly Cost (AWS):**
-- S3: ~$0.023/GB stored
-- Athena: ~$5/TB scanned
-- Total for 10GB data: < $5/month
 
-### Scalability & Extensibility
-
-1. **Adding New Data Sources**
-   - Create new workflow files following the same pattern
-   - Reuse the extract/load/transform structure
-
-2. **Scheduling**
-   ```yaml
-   triggers:
-     - id: monthly_schedule
-       type: io.kestra.plugin.core.trigger.Schedule
-       cron: "0 0 1 * *"  # First day of each month
-       timezone: America/New_York
-   ```
-
-3. **Backfilling Historical Data**
-   ```yaml
-   triggers:
-     - id: backfill
-       type: io.kestra.plugin.core.trigger.Flow
-       inputs:
-         taxi: green
-         year: "{{range(2019, 2022)}}"
-         month: "{{range(1, 13)}}"
-   ```
-
-4. **Error Handling**
-   ```yaml
-   errors:
-     - id: send_alert
-       type: io.kestra.plugin.notifications.slack.SlackIncomingWebhook
-       url: "{{kv('SLACK_WEBHOOK')}}"
-       payload: |
-         {"text": "Pipeline failed: {{flow.id}}"}
-   ```
-
-### Known Limitations
-
-1. **Athena MERGE** requires Iceberg tables (not supported on standard Hive tables)
-2. **External tables** must point to directories, not individual files
-3. **CSV parsing** may fail on malformed rows - use `ignore_unknown_values` in BigQuery
-4. **Rate limits** may apply for large batch operations
-
----
 
 ## License
 
